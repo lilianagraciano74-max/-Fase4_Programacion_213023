@@ -15,7 +15,7 @@ Este proyecto simula un sistema de reservas diseñado para ser robusto y estable
 *   **Estabilidad:** 10 simulaciones (válidas e inválidas) que demuestran que el sistema continúa funcionando.
 
 ## Integrantes del Equipo
-*   [Escribe tu Nombre aquí] - Lógica y Excepciones
+*   [Cristian Camilo Silva Graciano] - Lógica y Excepciones
 *   [Nombre Integrante 2] - Logging y Pruebas
 *   [Nombre Integrante 3] - Documentación y GitHub
 
