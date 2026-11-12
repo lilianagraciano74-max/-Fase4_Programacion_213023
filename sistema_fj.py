@@ -19,20 +19,76 @@ class Entidad:
         raise NotImplementedError("Método abstracto")
 
 # 4. CLASE CLIENTE (Encapsulación y Validaciones)
+
+# CLASE CLIENTE: ENCAPSULACIÓN Y VALIDACIONES
+
 class Cliente(Entidad):
-    def __init__(self, id_cliente, nombre, correo):
+
+    def __init__(self, id_cliente, nombre, correo, telefono):
         super().__init__(id_cliente)
-        self._nombre = nombre
-        self._correo = None
+
+        # Atributos privados: protegen la información del cliente
+        self.__nombre = None
+        self.__correo = None
+        self.__telefono = None
+
+        # Los datos pasan por validaciones antes de almacenarse
+        self.set_nombre(nombre)
         self.set_correo(correo)
+        self.set_telefono(telefono)
 
+    # Validación del nombre
+    def set_nombre(self, nombre):
+        if not isinstance(nombre, str) or not nombre.strip():
+            raise ErrorValidacion("El nombre no puede estar vacío.")
+
+        if len(nombre.strip()) < 3:
+            raise ErrorValidacion("El nombre debe tener al menos 3 caracteres.")
+
+        self.__nombre = nombre.strip()
+
+    # Validación del correo electrónico
     def set_correo(self, correo):
-        if "@" not in correo:
-            raise ErrorValidacion(f"Correo inválido: {correo}")
-        self._correo = correo
+        if not isinstance(correo, str):
+            raise ErrorValidacion("El correo debe ser texto.")
 
+        correo = correo.strip()
+
+        if "@" not in correo or "." not in correo.split("@")[-1]:
+            raise ErrorValidacion("El correo electrónico no es válido.")
+
+        if correo.count("@") != 1 or " " in correo:
+            raise ErrorValidacion("El formato del correo es incorrecto.")
+
+        self.__correo = correo
+
+    # Validación del teléfono
+    def set_telefono(self, telefono):
+        telefono = str(telefono).strip()
+
+        if not telefono.isdigit() or len(telefono) != 10:
+            raise ErrorValidacion("El teléfono debe contener 10 dígitos.")
+
+        self.__telefono = telefono
+
+    # Métodos para consultar los atributos privados
+    def get_nombre(self):
+        return self.__nombre
+
+    def get_correo(self):
+        return self.__correo
+
+    def get_telefono(self):
+        return self.__telefono
+
+    # Permite consultar la información del cliente
     def obtener_detalles(self):
-        return f"Cliente: {self._nombre} | Correo: {self._correo}"
+        return (
+            f"ID: {self.id_entidad} | "
+            f"Nombre: {self.__nombre} | "
+            f"Correo: {self.__correo} | "
+            f"Teléfono: {self.__telefono}"
+        )
 
 # 5. CLASE ABSTRACTA SERVICIO Y DERIVADOS (Polimorfismo)
 class Servicio(Entidad):
@@ -134,3 +190,4 @@ if __name__ == "__main__":
     Reserva(c1, s1).procesar(8)
 
     print("=== SIMULACIONES COMPLETADAS. REVISA EL ARCHIVO sistema_fj.log ===")
+
