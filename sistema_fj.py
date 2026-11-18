@@ -1,122 +1,118 @@
 import logging
+from abc import ABC, abstractmethod
 
+# ==========================================
 # 1. CONFIGURACIÓN DEL LOGGING
+# ==========================================
+# Se configura el registro de eventos en un archivo y en la consola
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.FileHandler('sistema_fj.log', mode='w', encoding='utf-8'), logging.StreamHandler()]
+    handlers=[
+        logging.FileHandler('sistema_fj.log', mode='w', encoding='utf-8'), 
+        logging.StreamHandler()
+    ]
 )
 
+# ==========================================
 # 2. EXCEPCIONES PERSONALIZADAS
-class ErrorValidacion(Exception): pass
-class ServicioNoDisponible(Exception): pass
+# ==========================================
+# Clase para errores de validación de datos
+class ErrorValidacion(Exception): 
+    pass
 
-# 3. CLASE ABSTRACTA
-class Entidad:
+# Clase para errores cuando un servicio externo falla
+class ServicioNoDisponible(Exception): 
+    pass
+
+# ==========================================
+# 3. CLASE ABSTRACTA BASE
+# ==========================================
+class Entidad(ABC):
+    """Clase abstracta que representa una entidad general del sistema."""
     def __init__(self, id_entidad):
         self.id_entidad = id_entidad
+
+    @abstractmethod
     def obtener_detalles(self):
-        raise NotImplementedError("Método abstracto")
+        """Método abstracto que debe ser implementado por las clases hijas."""
+        pass
 
+# ==========================================
 # 4. CLASE CLIENTE (Encapsulación y Validaciones)
-
-# CLASE CLIENTE: ENCAPSULACIÓN Y VALIDACIONES
-
+# ==========================================
 class Cliente(Entidad):
-
+    """Clase que representa a un cliente con atributos privados y validaciones."""
     def __init__(self, id_cliente, nombre, correo, telefono):
         super().__init__(id_cliente)
-
-        # Atributos privados: protegen la información del cliente
-        self.__nombre = None
-        self.__correo = None
-        self.__telefono = None
-
-        # Los datos pasan por validaciones antes de almacenarse
+        self._nombre = None
+        self._correo = None
+        self._telefono = None
+        
+        # Validaciones en el constructor
         self.set_nombre(nombre)
         self.set_correo(correo)
         self.set_telefono(telefono)
 
-    # Validación del nombre
     def set_nombre(self, nombre):
-        if not isinstance(nombre, str) or not nombre.strip():
-            raise ErrorValidacion("El nombre no puede estar vacío.")
+        # Valida que el nombre tenga al menos 3 caracteres
+        if len(nombre) < 3:
+            raise ErrorValidacion(f"El nombre '{nombre}' es demasiado corto.")
+        self._nombre = nombre
 
-        if len(nombre.strip()) < 3:
-            raise ErrorValidacion("El nombre debe tener al menos 3 caracteres.")
-
-        self.__nombre = nombre.strip()
-
-    # Validación del correo electrónico
     def set_correo(self, correo):
-        if not isinstance(correo, str):
-            raise ErrorValidacion("El correo debe ser texto.")
+        # Valida que tenga una sola arroba, sin espacios y un punto en el dominio
+        if correo.count("@") != 1 or " " in correo or "." not in correo.split("@")[1]:
+            raise ErrorValidacion(f"El correo '{correo}' no es válido.")
+        self._correo = correo
 
-        correo = correo.strip()
-
-        if "@" not in correo or "." not in correo.split("@")[-1]:
-            raise ErrorValidacion("El correo electrónico no es válido.")
-
-        if correo.count("@") != 1 or " " in correo:
-            raise ErrorValidacion("El formato del correo es incorrecto.")
-
-        self.__correo = correo
-
-    # Validación del teléfono
     def set_telefono(self, telefono):
-        telefono = str(telefono).strip()
-
+        # Valida que tenga exactamente 10 dígitos
         if not telefono.isdigit() or len(telefono) != 10:
-            raise ErrorValidacion("El teléfono debe contener 10 dígitos.")
+            raise ErrorValidacion(f"El teléfono '{telefono}' debe tener 10 dígitos.")
+        self._telefono = telefono
 
-        self.__telefono = telefono
-
-    # Métodos para consultar los atributos privados
-    def get_nombre(self):
-        return self.__nombre
-
-    def get_correo(self):
-        return self.__correo
-
-    def get_telefono(self):
-        return self.__telefono
-
-    # Permite consultar la información del cliente
     def obtener_detalles(self):
-        return (
-            f"ID: {self.id_entidad} | "
-            f"Nombre: {self.__nombre} | "
-            f"Correo: {self.__correo} | "
-            f"Teléfono: {self.__telefono}"
-        )
+        return f"Cliente: {self._nombre} | Correo: {self._correo} | Tel: {self._telefono}"
 
+# ==========================================
 # 5. CLASE ABSTRACTA SERVICIO Y DERIVADOS (Polimorfismo)
-class Servicio(Entidad):
-    def __init__(self, id_servicio, nombre):
+# ==========================================
+class Servicio(Entidad, ABC):
+    """Clase abstracta para los servicios ofrecidos por Software FJ."""
+    def __init__(self, id_servicio, nombre, costo_base):
         super().__init__(id_servicio)
         self.nombre = nombre
-    def calcular_costo(self, duracion_horas, impuesto=0.0, descuento=0.0): # Método sobrecargado
-        raise NotImplementedError
+        self.costo_base = costo_base # El costo base ahora entra por el constructor
+
+    @abstractmethod
+    def calcular_costo(self, duracion_horas, impuesto=0.0, descuento=0.0):
+        """Método abstracto para calcular el costo según el tipo de servicio."""
+        pass
+
     def obtener_detalles(self):
-        return f"Servicio: {self.nombre}"
+        return f"Servicio: {self.nombre} | Costo Base por hora: ${self.costo_base}"
 
 class ReservaSala(Servicio):
     def calcular_costo(self, duracion_horas, impuesto=0.0, descuento=0.0):
-        costo_base = duracion_horas * 50000
-        return (costo_base * (1 + impuesto)) - descuento
+        # Cálculo específico para reserva de salas
+        return (self.costo_base * duracion_horas * (1 + impuesto)) - descuento
 
 class AlquilerEquipo(Servicio):
     def calcular_costo(self, duracion_horas, impuesto=0.0, descuento=0.0):
-        costo_base = duracion_horas * 30000
-        return (costo_base * (1 + impuesto)) - descuento
+        # Cálculo específico para alquiler de equipos
+        return (self.costo_base * duracion_horas * (1 + impuesto)) - descuento
 
 class AsesoriaEspecializada(Servicio):
     def calcular_costo(self, duracion_horas, impuesto=0.0, descuento=0.0):
-        costo_base = duracion_horas * 80000
-        return (costo_base * (1 + impuesto)) - descuento
+        # Cálculo específico para asesorías
+        return (self.costo_base * duracion_horas * (1 + impuesto)) - descuento
 
-# 6. CLASE RESERVA (Integración y Excepciones)
+# ==========================================
+# 6. CLASE RESERVA (Manejo de Excepciones Completo)
+# ==========================================
 class Reserva:
+    """Integra cliente, servicio y duración, gestionando los errores."""
     def __init__(self, cliente, servicio):
         self.cliente = cliente
         self.servicio = servicio
@@ -124,17 +120,21 @@ class Reserva:
     
     def procesar(self, duracion, estado_servicio="activo"):
         try:
+            # Registro de inicio
             logging.info(f"Iniciando reserva de {self.cliente._nombre} para {self.servicio.nombre}")
             
+            # Validación de duración
             if duracion <= 0:
                 raise ErrorValidacion("La duración debe ser mayor a 0 horas.")
             
+            # Simulación de caída de servicio con encadenamiento de excepciones
             if estado_servicio == "caido":
                 try:
                     raise ConnectionError("Error 504 - Timeout de red")
                 except ConnectionError as e:
-                    raise ServicioNoDisponible("El servicio no está disponible.") from e
+                    raise ServicioNoDisponible("El servicio de reservas está fuera de línea.") from e
             
+            # Si todo está bien, se calcula el costo (impuesto 19% y descuento fijo de 5000)
             costo = self.servicio.calcular_costo(duracion, impuesto=0.19, descuento=5000)
             self.estado = "Confirmada"
         
@@ -142,52 +142,51 @@ class Reserva:
             logging.error(f"Error de validación: {e}")
             self.estado = "Fallida"
         except ServicioNoDisponible as e:
-            logging.error(f"Error de servicio: {e} | Causa: {e.__cause__}")
+            logging.error(f"Error de servicio: {e} | Causa raíz: {e.__cause__}")
             self.estado = "Fallida"
         except Exception as e:
-            logging.critical(f"Error inesperado: {e}")
+            # Captura de errores inesperados
+            logging.critical(f"Error inesperado en el sistema: {e}")
             self.estado = "Fallida"
         else:
+            # Se ejecuta solo si no hubo errores
             logging.info(f"Reserva exitosa. Costo total: ${costo}")
         finally:
+            # Se ejecuta siempre al final
             logging.info(f"Finalizado proceso de reserva. Estado final: {self.estado}\n")
 
+# ==========================================
 # 7. SIMULACIONES (10 OPERACIONES COMPLETAS)
+# ==========================================
 if __name__ == "__main__":
     print("=== SISTEMA INTEGRAL SOFTWARE FJ ===\n")
     
-    # Simulaciones (Válidas e Inválidas)
+    # 1. Creación de clientes (Válido e Inválido)
     try:
-        c1 = Cliente(1, "Ana", "ana@correo.com")
-        c2 = Cliente(2, "Pedro", "pedro_correo.com") # Inválido
+        # Cliente válido con todos los datos
+        c1 = Cliente(1, "Ana", "ana@correo.com", "3001234567") 
+        # Cliente inválido (correo mal formado)
+        c2 = Cliente(2, "Pedro", "pedro_correo.com", "3109876543") 
     except ErrorValidacion as e:
         logging.error(f"Fallo al crear cliente: {e}")
-        c2 = Cliente(2, "Pedro", "pedro@correo.com") # Corregido
+        # Se corrige el error para continuar con las pruebas
+        c2 = Cliente(2, "Pedro", "pedro@correo.com", "3109876543") 
 
-    s1 = ReservaSala(1, "Sala VIP")
-    s2 = AlquilerEquipo(2, "Laptop Gamer")
-    s3 = AsesoriaEspecializada(3, "Asesoría en Python")
+    # 2. Creación de servicios pasando el costo base por constructor
+    s1 = ReservaSala(1, "Sala VIP", 50000)
+    s2 = AlquilerEquipo(2, "Laptop Gamer", 30000)
+    s3 = AsesoriaEspecializada(3, "Asesoría en Python", 80000)
 
-    # 1. Reserva Válida
-    Reserva(c1, s1).procesar(2)
-    # 2. Reserva Válida
-    Reserva(c1, s2).procesar(5)
-    # 3. Reserva Inválida (Duración 0)
-    Reserva(c2, s3).procesar(0)
-    # 4. Reserva Inválida (Servicio caído)
-    Reserva(c2, s1).procesar(3, "caido")
-    # 5. Reserva Válida
-    Reserva(c1, s3).procesar(1)
-    # 6. Reserva Válida
-    Reserva(c2, s2).procesar(10)
-    # 7. Inválida (Duración negativa)
-    Reserva(c1, s1).procesar(-2)
-    # 8. Inválida (Servicio caído)
-    Reserva(c1, s2).procesar(2, "caido")
-    # 9. Válida
-    Reserva(c2, s3).procesar(4)
-    # 10. Válida
-    Reserva(c1, s1).procesar(8)
+    # 3. Ejecución de las 10 simulaciones (Válidas e Inválidas)
+    Reserva(c1, s1).procesar(2)               # 1. Válida
+    Reserva(c1, s2).procesar(5)               # 2. Válida
+    Reserva(c2, s3).procesar(0)               # 3. Inválida (Duración 0)
+    Reserva(c2, s1).procesar(3, "caido")      # 4. Inválida (Servicio caído)
+    Reserva(c1, s3).procesar(1)               # 5. Válida
+    Reserva(c2, s2).procesar(10)              # 6. Válida
+    Reserva(c1, s1).procesar(-2)              # 7. Inválida (Duración negativa)
+    Reserva(c1, s2).procesar(2, "caido")      # 8. Inválida (Servicio caído)
+    Reserva(c2, s3).procesar(4)               # 9. Válida
+    Reserva(c1, s1).procesar(8)               # 10. Válida
 
-    print("=== SIMULACIONES COMPLETADAS. REVISA EL ARCHIVO sistema_fj.log ===")
-
+    print("\n=== SIMULACIONES COMPLETADAS. REVISA EL ARCHIVO sistema_fj.log ===")
